@@ -8,6 +8,7 @@
       "__id__": 1
     },
     "optimizationPolicy": 0,
+    "persistent": false,
     "asyncLoadAssets": false
   },
   {
@@ -198,7 +199,7 @@
     "__prefab": {
       "__id__": 8
     },
-    "square": {
+    "grid": {
       "__uuid__": "b0bf6303-1174-4291-8544-18e32c4876a5",
       "__expectedType__": "cc.Prefab"
     },
@@ -222,6 +223,7 @@
     "__type__": "cc.UITransform",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 1
     },
@@ -249,6 +251,7 @@
     "__type__": "cc.Widget",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 1
     },
@@ -284,12 +287,16 @@
     "__type__": "61b229y9bVKQI9+nqAjZi24",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 1
     },
     "_enabled": true,
     "__prefab": {
       "__id__": 15
+    },
+    "xunluNode": {
+      "__id__": 7
     },
     "_id": ""
   },

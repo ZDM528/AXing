@@ -1,154 +1,195 @@
 import { Component, instantiate, Prefab, UITransform, _decorator, Node, EventTouch, Vec3, Sprite, Color } from "cc";
+import { baseNodeData, GridNode as GridNode } from "./baseLogic";
 
 const { ccclass, property } = _decorator;
-
-
-interface baseNodeData {
-    // g: number = 0;
-    // h: number = 0;
-    // f: number = 0;
-    arr: [] = [0, 1]
-    // squareRow = 12;
-    // squareCol = 12;
-    // parent: Node;
-    // visited: boolean = false;
-
-    // setCost(g: number, h: number, parent: Node) {
-    //     this.g = g;
-    //     this.h = h;
-    //     this.f = this.g + this.h;
-    //     this.parent = parent;
-    // }
-
-    // getCost() {
-    //     return this.f;
-    // }
-}
-
 
 @ccclass('XunLu')
 export class XunLu extends Component {
 
     @property(Prefab)
-    readonly square: Prefab = null;
-
-    width: number = 0;
-    height: number = 0;
-    startX: number = 0;
-    startY: number = 0;
+    readonly grid: Prefab = null;
 
     openList: number[][] = [];
     closeList: number[][] = [];
-    squares: Node[][] = [];
-    direction: number[][] = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-    minTargetDistance: number = Infinity;
-    nextMinX: number = 0;
-    nextMinY: number = 0;
-    onLoad() {
-        this.width = this.node.getComponent(UITransform).width / squareCol;
-        this.height = this.node.getComponent(UITransform).height / squareRow;
-        this.generateSquare();
+    resList: number[][] = []
+    targetX: number = 0;
+    targetY: number = 0;
+
+    data: baseNodeData;
+    girdNodes: GridNode[][] = [];
+    width: number = 0;
+    height: number = 0;
+
+    minX: number = 0;
+    minY: number = 0
+    maxDistance = Infinity;
+
+    initialize(data: baseNodeData) {
+        this.data = data;
+        this.width = this.node.getComponent(UITransform).width / data.mapCol;
+        this.height = this.node.getComponent(UITransform).height / data.mapRow;
+        this.generateGrid();
         this.initList();
     }
 
-    initialize(data: baseNodeData) {
-        let centerRow = squareRow / 2;
-        let centerCol = squareCol / 2;
-        for (let i = 0; i < squareRow; i++) {
-            this.squares[i] = [];
-            for (let j = 0; j < squareCol; j++) {
-                let square = instantiate(this.square);
-                square.positionX = (j - centerCol) * this.width + this.width / 2;
-                square.positionY = (-i + centerRow) * this.height - this.height / 2;
-                square.parent = this.node;
-                this.squares[i][j] = square;
-                this.initRoadCost(square)
-                square.on(Node.EventType.TOUCH_START, this.searchStart, this);
+    generateGrid() {
+        let centerRow = this.data.mapRow / 2;
+        let centerCol = this.data.mapCol / 2;
+        for (let i = 0; i < this.data.mapRow; i++) {
+            this.girdNodes[i] = [];
+            for (let j = 0; j < this.data.mapCol; j++) {
+                let gird = instantiate(this.grid);
+                gird.parent = this.node;
+                gird.active = true;
+                let gridNode = new GridNode(gird);
+                gird.positionX = (j - centerCol) * this.width + this.width / 2;
+                gird.positionY = (-i + centerRow) * this.height - this.height / 2;
+                this.girdNodes[i][j] = gridNode;
+                gird.on(Node.EventType.TOUCH_START, this.searchStart, this);
             }
         }
     }
 
     initList() {
         this.openList = [];
-        this.closeList = []
-        for (let i = 0; i < this.squares.length; i++) {
-            for (let j = 0; j < this.squares[0].length; j++) {
-                // this.squares[i][j]['hasSearch'] = false;
-                this.squares[i][j].getComponent(Sprite).color = new Color(255, 255, 255, 255);
+        this.closeList = [];
+        this.resList = [];
+        this.maxDistance = Infinity;
+        this.minX = 0;
+        this.minY = 0;
+        for (let i = 0; i < this.girdNodes.length; i++) {
+            for (let j = 0; j < this.girdNodes[0].length; j++) {
+                this.girdNodes[i][j].node.getComponent(Sprite).color = new Color(255, 255, 255, 255);
             }
         }
-        this.openList.push([this.startX, this.startY]);
-        // this.squares[this.startX][this.startY]['hasSearch'] = true;
-        this.minTargetDistance = Infinity;
-        this.nextMinX = 0;
-        this.nextMinY = 0;
-    }
-
-    generateSquare() {
-        let centerRow = squareRow / 2;
-        let centerCol = squareCol / 2;
-        for (let i = 0; i < squareRow; i++) {
-            this.squares[i] = [];
-            for (let j = 0; j < squareCol; j++) {
-                let square = instantiate(this.square);
-                square.positionX = (j - centerCol) * this.width + this.width / 2;
-                square.positionY = (-i + centerRow) * this.height - this.height / 2;
-                square.parent = this.node;
-                this.squares[i][j] = square;
-                this.initRoadCost(square)
-                square.on(Node.EventType.TOUCH_START, this.searchStart, this);
-            }
+        this.girdNodes[this.data.startX][this.data.startY].node.getComponent(Sprite).color = this.data.startColor;
+        for (let i = 0; i < this.data.barriers.length; i++) {
+            let barrierPoint = this.data.barriers[i];
+            this.girdNodes[barrierPoint[0]][barrierPoint[1]].node.getComponent(Sprite).color = this.data.barrierColor;
         }
+        this.openList.push([this.data.startX, this.data.startY]);
     }
 
     searchStart(event: EventTouch) {
         this.initList();
         let p = event.getUILocation();
         let local = this.node.getComponent(UITransform).convertToNodeSpaceAR(new Vec3(p.x, p.y, 0));
-        let targetY = Math.abs(Math.round((local.x - this.width / 2) / this.width + squareCol / 2));
-        let targetX = Math.abs(Math.round(((local.y + this.height / 2) / this.height - squareRow / 2)));
-        this.findRoad(targetX, targetY);
+        let targetY = Math.abs(Math.round((local.x - this.width / 2) / this.width + this.data.mapCol / 2));
+        let targetX = Math.abs(Math.round(((local.y + this.height / 2) / this.height - this.data.mapRow / 2)));
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.findRoad();
     }
 
-    // //本质是广度遍历的优化
-    findRoad(targetX: number, targetY: number) {
+    findRoad() {
+        let index: number = 0;
         while (this.openList.length > 0) {
-            let size = this.openList.length;
-            for (let i = 0; i < size; i++) {
-                const [x, y] = this.openList.shift();
-                this.resList.push([x, y]);
-                this.squares[x][y]['hasSearch'] = true;  // 已经寻路存储在resList的不再寻路
-                if (x == targetX && y == targetY) {
-                    // this.showRoad();
-                    break;
+            for (let i = 0; i < this.openList.length; i++) {
+                const [x, y] = this.openList[i];
+                let gird = this.girdNodes[x][y];
+                if (gird.f < this.maxDistance) {
+                    this.minX = x;
+                    this.minY = y;
+                    index = i;
                 }
-                for (let j = 0; j < this.direction.length; j++) {
-                    let nextX = x + this.direction[j][0];
-                    let nextY = y + this.direction[j][1];
-                    // this.getNearRoadXY(nextX, nextY, targetX, targetY);
+            }
+            this.openList.splice(index, 1);
+            this.closeList.push([this.minX, this.minY]);
+            this.resList.push([this.minX, this.minY]);
+            if (this.minX == this.targetX && this.minY == this.targetY) {
+                this.showRoad();
+                break;
+            }
+            this.findNeighbor(this.minX, this.minY);
+        }
+    }
+
+    findNeighbor(x: number, y: number) {
+        let curNode = this.girdNodes[x][y];
+        for (let i = 0; i < this.data.direction.length; i++) {
+            let direction = this.data.direction[i];
+            let nextX = direction[0] + x;
+            let nextY = direction[1] + y;
+            if (nextX < 0 || nextX >= this.girdNodes.length || nextY < 0 || nextY >= this.girdNodes[0].length) return;
+            let touchBarrier = this.touchBarrier(nextX, nextY);
+            if (touchBarrier) return;
+            let isInlCloseList = this.isInlCloseList(nextX, nextY);
+            if (isInlCloseList) return;
+            let isInOpenList = this.isInOpenList(nextX, nextY);
+            if (isInOpenList) {
+                let grid = this.girdNodes[nextX][nextY];
+                let g = curNode.g + 1;
+                let h = this.getTargetDistance(nextX, nextY);
+                if (g + h < grid.f) {
+                    grid.setCost(g, h, curNode.node);
                 }
-                this.openList.push([this.nextMinX, this.nextMinY]);
+            } else {
+                this.openList.push([nextX, nextY]);
+                let grid = this.girdNodes[nextX][nextY];
+                let g = curNode.g + 1;
+                let h = this.getTargetDistance(nextX, nextY);
+                grid.setCost(g, h, curNode.node);
             }
         }
     }
 
-    // showRoad() {
-    //     for (let i = 0; i < this.resList.length; i++) {
-    //         const [x, y] = this.resList[i]
-    //         let square = this.squares[x][y];
-    //         square.getComponent(Sprite).color = new Color(50, 61, 49, 255);
-    //     }
-    // }
+    getTargetDistance(nextX: number, nextY: number) {
+        let distance = Math.abs(this.targetX - nextX) + Math.abs(this.targetY - nextY);
+        return distance;
+    }
 
-    // getNearRoadXY(nextX: number, nextY: number, targetX: number, targetY: number) {  //寻找离目标点距离最近的方块
-    //     if (nextX < 0 || nextX >= this.squares.length || nextY < 0 || nextY >= this.squares[0].length || this.squares[nextX][nextY]['hasSearch']) return;
-    //     let distance = Math.abs(targetX - nextX) + Math.abs(targetY - nextY);
-    //     if (this.minTargetDistance >= distance) {
-    //         this.minTargetDistance = distance;
-    //         this.nextMinX = nextX;
-    //         this.nextMinY = nextY;
-    //     }
-    // }
+
+    touchBarrier(nextX: number, nextY: number) {
+        let isTouchBarrier: boolean = false;
+        for (let k = 0; k < this.data.barriers.length; k++) {
+            let barrierX = this.data.barriers[k][0];
+            let barrierY = this.data.barriers[k][1];
+            if (nextX == barrierX && nextY == barrierY) {
+                isTouchBarrier = true;
+                break;
+            }
+        }
+        return isTouchBarrier;
+    }
+
+    isInOpenList(nextX: number, nextY: number) {
+        let isInOpenList: boolean = false;
+        for (let k = 0; k < this.openList.length; k++) {
+            let openX = this.openList[k][0];
+            let openY = this.openList[k][1];
+            if (nextX == openX && nextY == openY) {
+                isInOpenList = true;
+                break;
+            }
+        }
+        return isInOpenList;
+    }
+
+    isInlCloseList(nextX: number, nextY: number) {
+        let isInCloseList: boolean = false;
+        for (let k = 0; k < this.closeList.length; k++) {
+            let closeX = this.closeList[k][0];
+            let closeY = this.closeList[k][1];
+            if (nextX == closeX && nextY == closeY) {
+                isInCloseList = true;
+                break;
+            }
+        }
+        return isInCloseList;
+    }
+
+
+    showRoad() {
+        if (this.resList.length == 1) {
+            console.log('死路');
+        }
+        let gird = this.girdNodes[this.targetX][this.targetY].node;
+        // while (gird) {
+        //     console.log(gird, gird.getComponent(Sprite), 'aaaaaaaaaaa');
+        //     gird.getComponent(Sprite).color = this.data.roadColor;
+        //     gird = gird.parent;
+        // }
+    }
 }
 
 //https://blog.csdn.net/qq_41517936/article/details/107044200?spm=1001.2101.3001.6650.16&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-16.pc_relevant_paycolumn_v3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-16.pc_relevant_paycolumn_v3&utm_relevant_index=23
