@@ -11,7 +11,7 @@ export class XunLu extends Component {
 
     openList: number[][] = [];
     closeList: number[][] = [];
-    resList: number[][] = []
+    // resList: number[][] = [];
     targetX: number = 0;
     targetY: number = 0;
 
@@ -53,7 +53,7 @@ export class XunLu extends Component {
     initList() {
         this.openList = [];
         this.closeList = [];
-        this.resList = [];
+        // this.resList = [];
         this.maxDistance = Infinity;
         this.minX = 0;
         this.minY = 0;
@@ -82,26 +82,31 @@ export class XunLu extends Component {
     }
 
     findRoad() {
-        let index: number = 0;
         while (this.openList.length > 0) {
+            let index: number;
+            this.maxDistance = Infinity;
+            this.minX = 0;
+            this.minY = 0;
             for (let i = 0; i < this.openList.length; i++) {
                 const [x, y] = this.openList[i];
                 let gird = this.girdNodes[x][y];
-                if (gird.f < this.maxDistance) {
+                if (gird.getCost() < this.maxDistance) {
                     this.minX = x;
                     this.minY = y;
+                    this.maxDistance = gird.getCost();
                     index = i;
                 }
             }
             this.openList.splice(index, 1);
             this.closeList.push([this.minX, this.minY]);
-            this.resList.push([this.minX, this.minY]);
+            // this.resList.push([this.minX, this.minY]);
             if (this.minX == this.targetX && this.minY == this.targetY) {
                 this.showRoad();
-                break;
+                return;
             }
             this.findNeighbor(this.minX, this.minY);
         }
+        console.log('道路不通');
     }
 
     findNeighbor(x: number, y: number) {
@@ -110,25 +115,25 @@ export class XunLu extends Component {
             let direction = this.data.direction[i];
             let nextX = direction[0] + x;
             let nextY = direction[1] + y;
-            if (nextX < 0 || nextX >= this.girdNodes.length || nextY < 0 || nextY >= this.girdNodes[0].length) return;
+            if (nextX < 0 || nextX >= this.girdNodes.length || nextY < 0 || nextY >= this.girdNodes[0].length) continue;
             let touchBarrier = this.touchBarrier(nextX, nextY);
-            if (touchBarrier) return;
-            let isInlCloseList = this.isInlCloseList(nextX, nextY);
-            if (isInlCloseList) return;
+            if (touchBarrier) continue;
+            let isInCloseList = this.isInCloseList(nextX, nextY);
+            if (isInCloseList) continue;
             let isInOpenList = this.isInOpenList(nextX, nextY);
             if (isInOpenList) {
                 let grid = this.girdNodes[nextX][nextY];
                 let g = curNode.g + 1;
                 let h = this.getTargetDistance(nextX, nextY);
-                if (g + h < grid.f) {
-                    grid.setCost(g, h, curNode.node);
+                if (g + h < grid.getCost()) {
+                    grid.setCost(g, h, curNode);
                 }
             } else {
                 this.openList.push([nextX, nextY]);
                 let grid = this.girdNodes[nextX][nextY];
                 let g = curNode.g + 1;
                 let h = this.getTargetDistance(nextX, nextY);
-                grid.setCost(g, h, curNode.node);
+                grid.setCost(g, h, curNode);
             }
         }
     }
@@ -165,7 +170,7 @@ export class XunLu extends Component {
         return isInOpenList;
     }
 
-    isInlCloseList(nextX: number, nextY: number) {
+    isInCloseList(nextX: number, nextY: number) {
         let isInCloseList: boolean = false;
         for (let k = 0; k < this.closeList.length; k++) {
             let closeX = this.closeList[k][0];
@@ -180,16 +185,13 @@ export class XunLu extends Component {
 
 
     showRoad() {
-        if (this.resList.length == 1) {
-            console.log('死路');
+        let grid = this.girdNodes[this.targetX][this.targetY];
+        while (grid) {
+            grid.node.getComponent(Sprite).color = this.data.roadColor;
+            grid = grid.parent;
         }
-        let gird = this.girdNodes[this.targetX][this.targetY].node;
-        // while (gird) {
-        //     console.log(gird, gird.getComponent(Sprite), 'aaaaaaaaaaa');
-        //     gird.getComponent(Sprite).color = this.data.roadColor;
-        //     gird = gird.parent;
-        // }
     }
 }
 
 //https://blog.csdn.net/qq_41517936/article/details/107044200?spm=1001.2101.3001.6650.16&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-16.pc_relevant_paycolumn_v3&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-16.pc_relevant_paycolumn_v3&utm_relevant_index=23
+//https://blog.csdn.net/zhiai315/article/details/112863221

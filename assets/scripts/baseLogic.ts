@@ -16,14 +16,14 @@ export class GridNode {
     g: number = 0;
     h: number = 0;
     f: number = 0;
-    parent: Node;
+    parent: GridNode;
     node: Node;
 
     constructor(node: Node) {
         this.node = node;
     }
 
-    setCost(g: number, h: number, parent: Node) {
+    setCost(g: number, h: number, parent: GridNode) {
         this.g = g;
         this.h = h;
         this.f = this.g + this.h;
