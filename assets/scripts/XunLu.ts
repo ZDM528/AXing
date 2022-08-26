@@ -59,6 +59,7 @@ export class XunLu extends Component {
         this.minY = 0;
         for (let i = 0; i < this.girdNodes.length; i++) {
             for (let j = 0; j < this.girdNodes[0].length; j++) {
+                this.girdNodes[i][j].cleanNode();
                 this.girdNodes[i][j].node.getComponent(Sprite).color = new Color(255, 255, 255, 255);
             }
         }
