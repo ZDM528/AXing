@@ -23,8 +23,8 @@ export class GameView extends View {
             startColor: new Color(139, 94, 130, 255),
             roadColor: new Color(50, 61, 49, 255),
             barrierColor: new Color(0, 0, 0, 255),
-            // direction: [[0, 1], [0, -1], [1, 0], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]]
-            direction: [[0, 1], [0, -1], [1, 0], [-1, 0]]
+            direction: [[0, 1], [0, -1], [1, 0], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]]
+            // direction: [[0, 1], [0, -1], [1, 0], [-1, 0]]
         }
         this.xunluNode.initialize(xunluData);
     }

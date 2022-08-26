@@ -121,9 +121,12 @@ export class XunLu extends Component {
             let isInCloseList = this.isInCloseList(nextX, nextY);
             if (isInCloseList) continue;
             let isInOpenList = this.isInOpenList(nextX, nextY);
+            // 斜的格子消耗为g=14,直的格子消耗为g=10
+            let isStraight = i < 4;
+            let addG = isStraight ? 10 : 14;
             if (isInOpenList) {
                 let grid = this.girdNodes[nextX][nextY];
-                let g = curNode.g + 1;
+                let g = curNode.g + addG;
                 let h = this.getTargetDistance(nextX, nextY);
                 if (g + h < grid.getCost()) {
                     grid.setCost(g, h, curNode);
@@ -131,7 +134,7 @@ export class XunLu extends Component {
             } else {
                 this.openList.push([nextX, nextY]);
                 let grid = this.girdNodes[nextX][nextY];
-                let g = curNode.g + 1;
+                let g = curNode.g + addG;
                 let h = this.getTargetDistance(nextX, nextY);
                 grid.setCost(g, h, curNode);
             }
